@@ -16,41 +16,54 @@ Built strictly in **Python & Java** with zero external platform dependencies.
 
 The system transforms the live architecture from an untrusted client-clock Last-Write-Wins (LWW) blob store into an **Authoritative, Monotonically Merged Multi-Device Sync Engine**.
 
-```
-                           HIGH-LEVEL ARCHITECTURE TOPOLOGY
-                           
-      +─────────────────────────────────────────────────────────────────────────────+
-      |                         CENTRAL CLOUD BACKEND                               |
-      |                                                                             |
-      |  +───────────────────────────────────+   +───────────────────────────────+  |
-      |  | Monotonic Revision Coordinator    |   | Authoritative Gem Ledger      |  |
-      |  | (Optimistic Concurrency Control)  |   | (IAP Receipt Verification)    |  |
-      |  +─────────────────▲─────────────────+   +───────────────▲───────────────+  |
-      |                    │                                     │                  |
-      |                    ▼                                     ▼                  |
-      |  +───────────────────────────────────────────────────────────────────────+  |
-      |  | ACID Storage & Migration Engine (FIFO Payer-Protection Ledger Split)  |  |
-      |  +─────────────────▲─────────────────────────────────────▲───────────────+  |
-      |                    │                                     │                  |
-      |                    ▼                                     ▼                  |
-      |  +───────────────────────────────────+   +───────────────────────────────+  |
-      |  | Version 2.5 REST Gateway          |   | Legacy Client Adapter Proxy   |  |
-      |  | (POST /api/v2/sync)               |   | (POST /api/v1/sync)           |  |
-      |  +─────────────────▲─────────────────+   +───────────────▲───────────────+  |
-      +────────────────────┼─────────────────────────────────────┼──────────────────+
-                           │                                     │
-         v2.5 Sync Protocol│                                     │ Legacy v1 JSON Sync
-         (Revision Merged) │                                     │ (Android 7 & v2.0-v2.4)
-                           ▼                                     ▼
-      +──────────────────────────────────────+         +────────────────────────────+
-      |         Modern Client v2.5           |         |     Legacy Client v2.4     |
-      |       (Smartphone / Tablet)          |         |    (5% Locked on Android 7)|
-      |                                      |         |                            |
-      |  - ISaveStorage (Atomic Disk IO)     |         | - Reads mirrored "coins"   |
-      |  - DomainMonotonicConflictResolver   |         | - Discards "gems" safely   |
-      |  - SaveManager Lifecycle Coordinator |         | - Protected by server from |
-      |  - CloudSyncClient (Offline Queue)   |         |   overwriting hard currency|
-      +──────────────────────────────────────+         +────────────────────────────+
+```mermaid
+graph TB
+    subgraph BACKEND ["CENTRAL CLOUD BACKEND"]
+        subgraph COORDINATOR ["Monotonic Revision Coordinator<br/>(Optimistic Concurrency Control)"]
+            C1[Revision Coordinator]
+        end
+        subgraph GEM_LEDGER ["Authoritative Gem Ledger<br/>(IAP Receipt Verification)"]
+            G1[Gem Ledger]
+        end
+        subgraph STORAGE ["ACID Storage & Migration Engine<br/>(FIFO Payer-Protection Ledger Split)"]
+            S1[ACID Storage]
+        end
+        subgraph GATEWAY ["Version 2.5 REST Gateway<br/>(POST /api/v2/sync)"]
+            GW[v2.5 Sync]
+        end
+        subgraph LEGACY_PROXY ["Legacy Client Adapter Proxy<br/>(POST /api/v1/sync)"]
+            LP[v1 Sync]
+        end
+    end
+
+    subgraph MODERN_CLIENT ["Modern Client v2.5<br/>(Smartphone / Tablet)"]
+        MC1[ISaveStorage - Atomic Disk IO]
+        MC2[DomainMonotonicConflictResolver - CRDT Max]
+        MC3[SaveManager - Lifecycle Coordinator]
+        MC4[CloudSyncClient - Offline Queue]
+    end
+
+    subgraph LEGACY_CLIENT ["Legacy Client v2.4<br/>(5% Locked on Android 7)"]
+        LC1[Reads mirrored "coins"]
+        LC2[Discards "gems" safely]
+        LC3[Protected from hard currency overwrite]
+    end
+
+    C1 --> S1
+    G1 --> S1
+    S1 --> GW
+    S1 --> LP
+    GW -->|v2.5 Sync Protocol<br/>(Revision Merged)| MC1
+    LP -->|Legacy v1 JSON Sync<br/>(Android 7 & v2.0-v2.4)| LC1
+
+    style BACKEND fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    style COORDINATOR fill:#e3f2fd,stroke:#0277bd,stroke-width:1px
+    style GEM_LEDGER fill:#e3f2fd,stroke:#0277bd,stroke-width:1px
+    style STORAGE fill:#fff3e0,stroke:#ef6c00,stroke-width:2px
+    style GATEWAY fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px
+    style LEGACY_PROXY fill:#fce4ec,stroke:#880e4f,stroke-width:1px
+    style MODERN_CLIENT fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    style LEGACY_CLIENT fill:#ffebee,stroke:#b71c1c,stroke-width:2px
 ```
 
 ### Core Data Flow & Synchronization Protocol
@@ -69,26 +82,30 @@ The system transforms the live architecture from an untrusted client-clock Last-
 
 The client subsystem replaces the legacy static `SaveSystem` class with modular, testable components:
 
-```
-                            CLIENT SDK COMPONENT MAP
-                            
-         +──────────────────────────────────────────────────────────+
-         |                       SaveManager                        |
-         |         (High-Level Game Lifecycle Coordinator)          |
-         +──────────────┬─────────────┬─────────────┬───────────────+
-                        │             │             │
-        +───────────────▼─+     +─────▼───────+     +──▼────────────+
-        |  ISaveStorage   |     | IConflict   |     |  ICloudSync   |
-        |  (Persistence)  |     |  Resolver   |     |    Client     |
-        +───────┬─────────+     +─────┬───────+     +──┬────────────+
-                │                     │                │
-        +───────▼─────────+     +─────▼───────+     +──▼────────────+
-        | LocalFileSave   |     | Domain      |     | CloudSync     |
-        | Storage         |     | Monotonic   |     | Client        |
-        | - Atomic .tmp   |     | Resolver    |     | - Persistent  |
-        | - v1->v2 Auto   |     | - CRDT Max  |     |   Offline     |
-        |   Migration     |     | - Sticky OR |     |   Queue       |
-        +─────────────────+     +─────────────+     +───────────────+
+```mermaid
+graph TD
+    SM[SaveManager<br/>(High-Level Game Lifecycle Coordinator)]
+    IS[ISaveStorage<br/>(Persistence)]
+    IC[IConflict<br/>Resolver]
+    ICS[ICloudSync<br/>Client]
+    LFS[LocalFileSave Storage<br/>- Atomic .tmp<br/>- v1->v2 Auto Migration]
+    DMR[Domain Monotonic<br/>Resolver<br/>- CRDT Max<br/>- Sticky OR]
+    CSC[CloudSync Client<br/>- Persistent<br/>Offline Queue]
+
+    SM --> IS
+    SM --> IC
+    SM --> ICS
+    IS --> LFS
+    IC --> DMR
+    ICS --> CSC
+
+    style SM fill:#e3f2fd,stroke:#0277bd,stroke-width:2px
+    style IS fill:#fff3e0,stroke:#ef6c00,stroke-width:1px
+    style IC fill:#fff3e0,stroke:#ef6c00,stroke-width:1px
+    style ICS fill:#fff3e0,stroke:#ef6c00,stroke-width:1px
+    style LFS fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px
+    style DMR fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px
+    style CSC fill:#e8f5e9,stroke:#2e7d32,stroke-width:1px
 ```
 
 1. **Single Responsibility Principle (SRP)**:
@@ -236,3 +253,88 @@ uvicorn server.api:app --reload --port 8000
 * **Legacy v1 Sync**: `POST http://localhost:8000/api/v1/sync`
 * **Version 2.5 Sync**: `POST http://localhost:8000/api/v2/sync`
 * **Currency Migration**: `POST http://localhost:8000/api/v2/migrate`
+
+---
+
+## 7. API Endpoints & curl Commands
+
+Start the server first (keep this terminal open):
+
+```bash
+uvicorn server.api:app --reload --port 8000
+```
+
+Then test from another terminal:
+
+### 1. Health Check
+**URL:** `GET http://localhost:8000/health`
+
+PowerShell (curl.exe):
+```powershell
+curl.exe http://localhost:8000/health
+```
+
+PowerShell (Invoke-WebRequest):
+```powershell
+Invoke-WebRequest -Uri http://localhost:8000/health -Method GET
+```
+
+---
+
+### 2. v2.5 Sync (Modern Client)
+**URL:** `POST http://localhost:8000/api/v2/sync`
+
+PowerShell (curl.exe):
+```powershell
+curl.exe -X POST http://localhost:8000/api/v2/sync -H "Content-Type: application/json" -d "{\"player_id\":\"p1\",\"coins\":100,\"gems\":50,\"level\":5,\"revision\":1}"
+```
+
+PowerShell (Invoke-WebRequest):
+```powershell
+Invoke-WebRequest -Uri http://localhost:8000/api/v2/sync -Method POST -Headers @{"Content-Type"="application/json"} -Body "{\"player_id\":\"p1\",\"coins\":100,\"gems\":50,\"level\":5,\"revision\":1}"
+```
+
+---
+
+### 3. Legacy v1 Sync (Android 7 / Old Clients)
+**URL:** `POST http://localhost:8000/api/v1/sync`
+
+PowerShell (curl.exe):
+```powershell
+curl.exe -X POST http://localhost:8000/api/v1/sync -H "Content-Type: application/json" -d "{\"player_id\":\"p1\",\"coins\":100,\"level\":5}"
+```
+
+PowerShell (Invoke-WebRequest):
+```powershell
+Invoke-WebRequest -Uri http://localhost:8000/api/v1/sync -Method POST -Headers @{"Content-Type"="application/json"} -Body "{\"player_id\":\"p1\",\"coins\":100,\"level\":5}"
+```
+
+---
+
+### 4. Currency Migration
+**URL:** `POST http://localhost:8000/api/v2/migrate`
+
+PowerShell (curl.exe):
+```powershell
+curl.exe -X POST http://localhost:8000/api/v2/migrate -H "Content-Type: application/json" -d "{\"player_id\":\"p1\"}"
+```
+
+PowerShell (Invoke-WebRequest):
+```powershell
+Invoke-WebRequest -Uri http://localhost:8000/api/v2/migrate -Method POST -Headers @{"Content-Type"="application/json"} -Body "{\"player_id\":\"p1\"}"
+```
+
+---
+
+### 5. Swagger UI (Browser)
+Open this URL in your browser:
+```
+http://localhost:8000/docs
+```
+
+---
+
+## ⚠️ Windows PowerShell Note
+
+In PowerShell, `curl` is an alias for `Invoke-WebRequest`, **not** the real curl. Use **`curl.exe`** for the standard curl syntax shown above, or use `Invoke-WebRequest` with `-Headers` as a dictionary (`@{}`).
+
