@@ -4,13 +4,15 @@ Use the template below when sending your completed assignment to the hiring team
 
 ---
 
-**Subject**: Take-Home Submission: Senior AI Systems Engineer – Merge Kingdom v2.5 Architecture – [Your Name]
+**Subject**: Take-Home Submission: AI Engineer – Merge Kingdom v2.5 Architecture – Shubham Savarn
 
-**To**: careers@chaosenginelabs.com *(or the hiring coordinator's email)*
+**To**: Reply directly to the assignment invitation email you received from Chaos Engine Labs (keep the same thread)
 
 **Dear Chaos Engine Labs Team,**
 
-Please find attached my completed take-home assignment for the AI Engineer position, designing and shipping the Version 2.5 dual-currency system for *Merge Kingdom*.
+Thank you for the assignment invitation. I planned to start on [Planned Start Date, e.g., Saturday, November 7, 2026], and I am submitting this within 48 hours of that date as requested.
+
+Please find attached my completed take-home assignment for the **AI Engineer** position, designing and shipping the Version 2.5 dual-currency system for *Merge Kingdom*.
 
 ### Summary of Deliverables Attached:
 1. **Written Solution Document**: `CEL_AI_Engineer_Assignment_Solution.md`
