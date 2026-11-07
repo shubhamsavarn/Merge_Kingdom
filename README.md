@@ -19,31 +19,31 @@ The system transforms the live architecture from an untrusted client-clock Last-
 ```mermaid
 graph TB
     subgraph BACKEND ["CENTRAL CLOUD BACKEND"]
-        subgraph COORDINATOR ["Monotonic Revision Coordinator (Optimistic Concurrency Control)"]
+        subgraph COORDINATOR ["Monotonic Revision Coordinator"]
             C1[Revision Coordinator]
         end
-        subgraph GEM_LEDGER ["Authoritative Gem Ledger (IAP Receipt Verification)"]
+        subgraph GEM_LEDGER ["Authoritative Gem Ledger"]
             G1[Gem Ledger]
         end
-        subgraph STORAGE ["ACID Storage & Migration Engine (FIFO Payer-Protection Ledger Split)"]
+        subgraph STORAGE ["ACID Storage Migration Engine"]
             S1[ACID Storage]
         end
-        subgraph GATEWAY ["Version 2.5 REST Gateway (POST /api/v2/sync)"]
+        subgraph GATEWAY ["Version 2.5 REST Gateway"]
             GW[v2.5 Sync]
         end
-        subgraph LEGACY_PROXY ["Legacy Client Adapter Proxy (POST /api/v1/sync)"]
+        subgraph LEGACY_PROXY ["Legacy Client Adapter Proxy"]
             LP[v1 Sync]
         end
     end
 
-    subgraph MODERN_CLIENT ["Modern Client v2.5 (Smartphone / Tablet)"]
-        MC1[ISaveStorage - Atomic Disk IO]
-        MC2[DomainMonotonicConflictResolver - CRDT Max]
-        MC3[SaveManager - Lifecycle Coordinator]
-        MC4[CloudSyncClient - Offline Queue]
+    subgraph MODERN_CLIENT ["Modern Client v2.5"]
+        MC1[ISaveStorage Atomic Disk IO]
+        MC2[DomainMonotonicConflictResolver CRDT Max]
+        MC3[SaveManager Lifecycle Coordinator]
+        MC4[CloudSyncClient Offline Queue]
     end
 
-    subgraph LEGACY_CLIENT ["Legacy Client v2.4 (5% Locked on Android 7)"]
+    subgraph LEGACY_CLIENT ["Legacy Client v2.4"]
         LC1[Reads mirrored coins]
         LC2[Discards gems safely]
         LC3[Protected from hard currency overwrite]
@@ -84,13 +84,13 @@ The client subsystem replaces the legacy static `SaveSystem` class with modular,
 
 ```mermaid
 graph TD
-    SM[SaveManager (High-Level Game Lifecycle Coordinator)]
-    IS[ISaveStorage (Persistence)]
+    SM[SaveManager High Level Game Lifecycle Coordinator]
+    IS[ISaveStorage Persistence]
     IC[IConflict Resolver]
     ICS[ICloudSync Client]
-    LFS[LocalFileSave Storage - Atomic .tmp - v1->v2 Auto Migration]
-    DMR[Domain Monotonic Resolver - CRDT Max - Sticky OR]
-    CSC[CloudSync Client - Persistent Offline Queue]
+    LFS[LocalFileSave Storage Atomic tmp v1 to v2 Auto Migration]
+    DMR[Domain Monotonic Resolver CRDT Max Sticky OR]
+    CSC[CloudSync Client Persistent Offline Queue]
 
     SM --> IS
     SM --> IC
