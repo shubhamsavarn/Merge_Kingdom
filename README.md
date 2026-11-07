@@ -1,5 +1,5 @@
 # Merge Kingdom (Version 2.5): Two-Currency Live-Ops Architecture
-## Chaos Engine Labs · Senior AI & Systems Engineering Deliverable
+## Chaos Engine Labs · AI Engineer Deliverable
 
 > **The Invariable Rule**:  
 > *"No player may lose progress, or anything that they paid for."* (Assignment Brief, Page 2)
@@ -220,7 +220,7 @@ python run_all_simulations.py
 ```text
 ================================================================================
  CHAOS ENGINE LABS - MERGE KINGDOM VERSION 2.5 VERIFICATION SUITE
- Senior Systems & AI Engineer Assessment (Python & Java Architecture)
+ AI Engineer Assessment (Python & Java Architecture)
  Invariant Rule: 'No player may lose progress, or anything that they paid for.'
 ================================================================================
 [SUCCESS] Incident 1 resolved: Level 160 preserved despite newer offline phone clock.
