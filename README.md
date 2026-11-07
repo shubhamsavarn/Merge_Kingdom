@@ -19,33 +19,33 @@ The system transforms the live architecture from an untrusted client-clock Last-
 ```mermaid
 graph TB
     subgraph BACKEND ["CENTRAL CLOUD BACKEND"]
-        subgraph COORDINATOR ["Monotonic Revision Coordinator<br/>(Optimistic Concurrency Control)"]
+        subgraph COORDINATOR ["Monotonic Revision Coordinator (Optimistic Concurrency Control)"]
             C1[Revision Coordinator]
         end
-        subgraph GEM_LEDGER ["Authoritative Gem Ledger<br/>(IAP Receipt Verification)"]
+        subgraph GEM_LEDGER ["Authoritative Gem Ledger (IAP Receipt Verification)"]
             G1[Gem Ledger]
         end
-        subgraph STORAGE ["ACID Storage & Migration Engine<br/>(FIFO Payer-Protection Ledger Split)"]
+        subgraph STORAGE ["ACID Storage & Migration Engine (FIFO Payer-Protection Ledger Split)"]
             S1[ACID Storage]
         end
-        subgraph GATEWAY ["Version 2.5 REST Gateway<br/>(POST /api/v2/sync)"]
+        subgraph GATEWAY ["Version 2.5 REST Gateway (POST /api/v2/sync)"]
             GW[v2.5 Sync]
         end
-        subgraph LEGACY_PROXY ["Legacy Client Adapter Proxy<br/>(POST /api/v1/sync)"]
+        subgraph LEGACY_PROXY ["Legacy Client Adapter Proxy (POST /api/v1/sync)"]
             LP[v1 Sync]
         end
     end
 
-    subgraph MODERN_CLIENT ["Modern Client v2.5<br/>(Smartphone / Tablet)"]
+    subgraph MODERN_CLIENT ["Modern Client v2.5 (Smartphone / Tablet)"]
         MC1[ISaveStorage - Atomic Disk IO]
         MC2[DomainMonotonicConflictResolver - CRDT Max]
         MC3[SaveManager - Lifecycle Coordinator]
         MC4[CloudSyncClient - Offline Queue]
     end
 
-    subgraph LEGACY_CLIENT ["Legacy Client v2.4<br/>(5% Locked on Android 7)"]
-        LC1[Reads mirrored "coins"]
-        LC2[Discards "gems" safely]
+    subgraph LEGACY_CLIENT ["Legacy Client v2.4 (5% Locked on Android 7)"]
+        LC1[Reads mirrored coins]
+        LC2[Discards gems safely]
         LC3[Protected from hard currency overwrite]
     end
 
@@ -53,8 +53,8 @@ graph TB
     G1 --> S1
     S1 --> GW
     S1 --> LP
-    GW -->|v2.5 Sync Protocol<br/>(Revision Merged)| MC1
-    LP -->|Legacy v1 JSON Sync<br/>(Android 7 & v2.0-v2.4)| LC1
+    GW -->|v2.5 Sync Protocol| MC1
+    LP -->|Legacy v1 JSON Sync| LC1
 
     style BACKEND fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     style COORDINATOR fill:#e3f2fd,stroke:#0277bd,stroke-width:1px
@@ -84,13 +84,13 @@ The client subsystem replaces the legacy static `SaveSystem` class with modular,
 
 ```mermaid
 graph TD
-    SM[SaveManager<br/>(High-Level Game Lifecycle Coordinator)]
-    IS[ISaveStorage<br/>(Persistence)]
-    IC[IConflict<br/>Resolver]
-    ICS[ICloudSync<br/>Client]
-    LFS[LocalFileSave Storage<br/>- Atomic .tmp<br/>- v1->v2 Auto Migration]
-    DMR[Domain Monotonic<br/>Resolver<br/>- CRDT Max<br/>- Sticky OR]
-    CSC[CloudSync Client<br/>- Persistent<br/>Offline Queue]
+    SM[SaveManager (High-Level Game Lifecycle Coordinator)]
+    IS[ISaveStorage (Persistence)]
+    IC[IConflict Resolver]
+    ICS[ICloudSync Client]
+    LFS[LocalFileSave Storage - Atomic .tmp - v1->v2 Auto Migration]
+    DMR[Domain Monotonic Resolver - CRDT Max - Sticky OR]
+    CSC[CloudSync Client - Persistent Offline Queue]
 
     SM --> IS
     SM --> IC
